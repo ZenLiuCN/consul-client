@@ -16,6 +16,7 @@
 package cn.zenliu.java.consul.trasport;
 
 
+import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -29,6 +30,11 @@ public interface Sender<T> {
     Responder<T> send(@Nullable Object body);
 
     Responder<T> sendRaw(byte @Nullable [] body);
+
+    /**
+     * This method always consume one refCnt of ByteBuf
+     */
+    Responder<T> sendRaw(@Nullable ByteBuf body);
 
     Responder<T> sendRaw(@Nullable String body);
 }

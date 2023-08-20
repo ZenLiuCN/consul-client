@@ -28,11 +28,21 @@
         <module.name>consul.api</module.name>
     </properties>
     <artifactId>consul-api</artifactId>
-    <description>pure API for consul</description>
+    <description>pure api for consul</description>
     <dependencies>
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-buffer</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <!--  for lombok  -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>

@@ -14,10 +14,10 @@ Not found a suitable jvm consul client. Mostly inspired by [consul-api](https://
 
 ## What
 
-1. The core `consul-api` with minial dependencies, only one `netty-buffer`.
-2. Ship with`consul-codec-jackson` and `consul-codec-gson` both supported, also possible and easy to replace with other
+1. The core `consul-api` with minial dependencies, only `netty-buffer` and `slf4j-api`.
+2. `consul-codec-jackson` and `consul-codec-gson` both supported, also possible and easy to replace with other
    json libraries.
-3. Ship with `consul-transport-http` and `consult-transport-reactor-netty` for two default transport implement.
+3. `consul-transport-http` and `consult-transport-reactor-netty` for two default transport implements.
 
 ## Usage
 
@@ -61,12 +61,12 @@ import cn.zenliu.java.consul.Client;
 
 public class Main {
    public static void main(String[] args) {
-      try(var  client = Client.create(null, "http://127.0.01:8500", false)){
+      try (var client = Client.create(null, "http://127.0.01:8500", false)) {
          //fetch an agent client
          var agent = client.agent(null, null); //no token, no extra parameter.
          try {
             //request then member api
-            System.out.println(agent.member().get());
+            System.out.println(agent.members().get());
          } catch (Exception e) {
             e.printStackTrace();
          }
@@ -74,6 +74,7 @@ public class Main {
    }
 }
 ```
+
 ## TODO
 
 1. Add basic test cases.

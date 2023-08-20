@@ -16,6 +16,8 @@
 package cn.zenliu.java.consul;
 
 import cn.zenliu.java.consul.trasport.Response;
+import io.netty.buffer.ByteBuf;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
@@ -229,7 +231,7 @@ public interface Endpoints {
         default Response<Info<Void>> checkDeregister(String checkId) {
             return requester()
                     .header(TOKEN, token())
-                    .path(VERSION, "agent", "check", "deregister", checkId)
+                    .path(VERSION, "agent", "check", "deregister", Parameter.encode(checkId))
                     .query(parameter())
 
                     .put(Void.class, (Void) null)
@@ -243,7 +245,7 @@ public interface Endpoints {
         default Response<Info<Void>> checkPass(String checkId, @Nullable String note) {
             return requester()
                     .header(TOKEN, token())
-                    .path(VERSION, "agent", "check", "pass", checkId)
+                    .path(VERSION, "agent", "check", "pass", Parameter.encode(checkId))
                     .query(parameter())
 
                     .query(note != null, "note", Parameter.encode(note))
@@ -259,7 +261,7 @@ public interface Endpoints {
         default Response<Info<Void>> checkWarn(String checkId, @Nullable String note) {
             return requester()
                     .header(TOKEN, token())
-                    .path(VERSION, "agent", "check", "warn", checkId)
+                    .path(VERSION, "agent", "check", "warn", Parameter.encode(checkId))
                     .query(parameter())
 
                     .query(note != null, "note", Parameter.encode(note))
@@ -277,7 +279,7 @@ public interface Endpoints {
             return requester()
                     .header(TOKEN, token())
 
-                    .path(VERSION, "agent", "check", "fail", checkId)
+                    .path(VERSION, "agent", "check", "fail", Parameter.encode(checkId))
                     .query(parameter())
 
                     .query(note != null, "note", Parameter.encode(note))
@@ -308,7 +310,7 @@ public interface Endpoints {
         default Response<Info<Void>> serviceDeregister(String serviceId) {
             return requester()
                     .header(TOKEN, token())
-                    .path(VERSION, "agent", "service", "deregister", serviceId)
+                    .path(VERSION, "agent", "service", "deregister", Parameter.encode(serviceId))
                     .query(parameter())
 
                     .put(Void.class, (Void) null)
@@ -322,7 +324,7 @@ public interface Endpoints {
         default Response<Info<Void>> serviceMaintenance(String serviceId, boolean maintenanceEnabled, @Nullable String reason) {
             return requester()
                     .header(TOKEN, token())
-                    .path(VERSION, "agent", "service", "maintenance", serviceId)
+                    .path(VERSION, "agent", "service", "maintenance", Parameter.encode(serviceId))
                     .query(parameter())
 
                     .query("enable", Boolean.toString(maintenanceEnabled))
@@ -777,9 +779,7 @@ public interface Endpoints {
     }
 
     interface Store<T extends Store<T>> extends Values.Store, Context<T> {
-
-
-        //region function
+        @ApiStatus.Internal
         static String[] buildKeys(CharSequence key, CharSequence... segments) {
             var s = new String[segments.length + 3];
             s[0] = VERSION;
@@ -791,34 +791,77 @@ public interface Endpoints {
             return s;
         }
 
+
+        /**
+         * Consul always store value as binary and transport as Base64 string.
+         *
+         * @param key      the key
+         * @param segments optional key segments
+         * @return bas64 text value or null
+         * @see #binary(CharSequence, CharSequence...)
+         */
         default Response<Info<Text>> text(CharSequence key, CharSequence... segments) {
+            return binary(key, segments)
+                    .map(i -> i.map(Binary::toText));
+
+        }
+
+        /**
+         * Consul always store value as binary and transport as Base64 string.
+         *
+         * @param key      the key
+         * @param segments optional key segments
+         * @return list of base64 text values
+         * @see #binaryAll(CharSequence, CharSequence...)
+         */
+        default Response<Info<List<Text>>> textAll(CharSequence key, @Nullable CharSequence... segments) {
+            return binaryAll(key, segments)
+                    .map(i -> i.map(l -> l.stream().map(Binary::toText).toList()));
+
+        }
+
+        /**
+         * Consul always store value as binary and transport as Base64 string.
+         *
+         * @param key      the key
+         * @param segments optional key segments
+         * @return bas64 text value or null
+         * @see #binary(CharSequence, CharSequence...)
+         */
+        default Response<Info<Base64>> base64(CharSequence key, CharSequence... segments) {
             return requester()
 
                     .header(TOKEN, token())
                     .path(buildKeys(key, segments))
                     .query(parameter())
 
-
-                    .get(Text.LIST, Text.EMPTY_LIST)
+                    .get(Base64.LIST, Base64.EMPTY_LIST)
                     .send(null)
                     .response()
                     .map(Info::one);
 
         }
 
-        default Response<Info<List<Text>>> textAll(CharSequence key, @Nullable CharSequence... segments) {
+        /**
+         * Consul always store value as binary and transport as Base64 string.
+         *
+         * @param key      the key
+         * @param segments optional key segments
+         * @return list of base64 text values
+         * @see #binaryAll(CharSequence, CharSequence...)
+         */
+        default Response<Info<List<Base64>>> base64All(CharSequence key, @Nullable CharSequence... segments) {
             return requester()
 
                     .header(TOKEN, token())
                     .path(buildKeys(key, segments))
                     .query(parameter())
-
                     .query("recurse")
-
-                    .get(Text.LIST, Text.EMPTY_LIST)
+                    .get(Base64.LIST, Base64.EMPTY_LIST)
                     .send(null)
                     .response()
-                    .map(Info::parse);
+                    .map(Info::parse)
+                    ;
 
 
         }
@@ -873,7 +916,16 @@ public interface Endpoints {
         }
 
 
-        default Response<Info<Boolean>> set(@Nullable String value, @Nullable PutParameter parameter, CharSequence key, CharSequence... segments) {
+        /**
+         * store string into consul.
+         *
+         * @param value     string value to send
+         * @param parameter extra parameter
+         * @param key       the key
+         * @param segments  optional key segments.
+         * @return success or not
+         */
+        default Response<Info<Boolean>> putText(String value, @Nullable PutParameter parameter, CharSequence key, CharSequence... segments) {
             return requester()
 
                     .header(TOKEN, token())
@@ -884,14 +936,14 @@ public interface Endpoints {
 
 
                     .put(Boolean.class, (Boolean) null)
-                    .send(value)
+                    .sendRaw(value)
                     .response()
                     .map(Info::parse);
 
 
         }
 
-        default Response<Info<Boolean>> set(byte @Nullable [] value, @Nullable PutParameter parameter, CharSequence key, CharSequence... segments) {
+        default Response<Info<Boolean>> putBinary(byte[] value, @Nullable PutParameter parameter, CharSequence key, CharSequence... segments) {
             return requester()
 
                     .header(TOKEN, token())
@@ -902,7 +954,24 @@ public interface Endpoints {
 
 
                     .put(Boolean.class, (Boolean) null)
-                    .send(value)
+                    .sendRaw(value)
+                    .response()
+                    .map(Info::parse);
+
+        }
+
+        default Response<Info<Boolean>> putBinary(ByteBuf value, @Nullable PutParameter parameter, CharSequence key, CharSequence... segments) {
+            return requester()
+
+                    .header(TOKEN, token())
+                    .path(buildKeys(key, segments))
+                    .query(parameter())
+
+                    .query(parameter)
+
+
+                    .put(Boolean.class, (Boolean) null)
+                    .sendRaw(value)
                     .response()
                     .map(Info::parse);
 
@@ -941,7 +1010,6 @@ public interface Endpoints {
                     .map(Info::parse);
 
         }
-        //endregion
 
 
     }

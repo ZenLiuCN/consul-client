@@ -16,67 +16,93 @@
 package cn.zenliu.java.consul.codec.gson;
 
 import cn.zenliu.java.consul.trasport.Codec;
-import cn.zenliu.java.consul.trasport.TypeRef;
 import com.google.auto.service.AutoService;
 import com.google.gson.Gson;
+import com.google.gson.TypeAdapter;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
+import com.google.gson.stream.JsonWriter;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.ByteBufUtil;
+import lombok.SneakyThrows;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.Type;
+import java.util.Base64;
 
 /**
  * @author Zen.Liu
  * @since 2023-08-20
  */
-public class GsonCodec implements Codec {
-    protected final Gson gson;
+@SuppressWarnings("unused")
+public class GsonCodec extends Codec.BaseCodec {
+    protected static class Base64TypeAdapter extends TypeAdapter<byte[]> {
 
-    public GsonCodec(@Nullable Gson gson) {
+        @Override
+        public void write(JsonWriter out, byte[] value) throws IOException {
+            if (value == null) {
+                out.nullValue();
+            } else {
+                out.value(Base64.getEncoder().encodeToString(value));
+            }
+        }
+
+        @Override
+        public byte[] read(JsonReader in) throws IOException {
+            if (in.peek() == JsonToken.NULL) {
+                in.nextNull();
+                return new byte[0];
+            } else {
+                String data = in.nextString();
+                return Base64.getDecoder().decode(data);
+            }
+        }
+    }
+
+    protected static final Base64TypeAdapter Base64TypeAdapter = new Base64TypeAdapter();
+    protected final Gson gson;
+    protected final Logger logger;
+
+    public GsonCodec(@Nullable Gson gson, boolean debug) {
 
         this.gson = (gson == null ? new Gson() : gson).newBuilder()
+                .registerTypeAdapter(byte[].class, Base64TypeAdapter)
                 .create();
+        logger = debug ? LoggerFactory.getLogger(this.getClass()) : null;
     }
 
     @Override
-    public <T> T decode(ByteBuf buf, Type type) {
-        buf.retain();
-        try {
-            var is = new ByteBufInputStream(buf);
-            var r = new InputStreamReader(is);
-            return gson.fromJson(r, type instanceof TypeRef<?> ref ? ref.type() : type);
-        } finally {
-            try {
-                buf.release();
-            } catch (Exception ignore) {
-            }
-        }
+    protected <T> T fromJson(ByteBuf buf, Type type) {
+        if (logger != null && logger.isDebugEnabled()) logger.debug("will decode:\n{}", ByteBufUtil.prettyHexDump(buf));
+        var is = new ByteBufInputStream(buf);
+        var r = new InputStreamReader(is);
+        return gson.fromJson(r, type);
     }
 
     @Override
-    public void encode(ByteBuf buf, Object value) {
-        buf.retain();
-        try {
-            var os = new ByteBufOutputStream(buf);
-            var w = new OutputStreamWriter(os);
-            gson.toJson(value, w);
-        } finally {
-            try {
-                buf.release();
-            } catch (Exception ignore) {
-            }
-        }
+    @SneakyThrows
+    protected void toJson(ByteBuf buf, Object value) {
+        var os = new ByteBufOutputStream(buf);
+        var w = new OutputStreamWriter(os);
+        gson.toJson(value, w);
+        w.flush(); //!! required
+        if (logger != null && logger.isDebugEnabled()) logger.debug("encoded:\n{}", ByteBufUtil.prettyHexDump(buf));
     }
+
 
     @AutoService(Codec.Provider.class)
-    static class Provider implements Codec.Provider {
+    public static class Provider implements Codec.Provider {
 
         @Override
         public Codec get(boolean debug) {
-            return new GsonCodec(null);
+            return new GsonCodec(null, true);
         }
     }
 }

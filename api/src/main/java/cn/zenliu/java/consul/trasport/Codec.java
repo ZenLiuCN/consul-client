@@ -16,6 +16,7 @@
 package cn.zenliu.java.consul.trasport;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.ReferenceCountUtil;
 
 import java.lang.reflect.Type;
 import java.util.NoSuchElementException;
@@ -27,7 +28,7 @@ import java.util.ServiceLoader;
  */
 public interface Codec {
     /**
-     * read json from byte-buf
+     * read json from ByteBuf,this method will consume 1 refCnt,if throws error.
      *
      * @param buf  the ByteBuf contains json data.
      * @param type the {@link Type} or {@link TypeRef}.
@@ -37,13 +38,65 @@ public interface Codec {
     <T> T decode(ByteBuf buf, Type type);
 
     /**
-     * write json into byte-buf
+     * write json into ByteBuf,this method will consume 1 refCnt,if throws error.
      *
      * @param buf   the ByteBuf contains json data.
      * @param value none null object to write.
      */
     void encode(ByteBuf buf, Object value);
 
+    /**
+     * the implement should not deal with ByteBuf refCnt.
+     */
+    abstract class BaseCodec implements Codec {
+        @Override
+        public <T> T decode(ByteBuf buf, Type type) {
+            //assert buf.refCnt() == 1 : " ref count is " + buf.refCnt();
+            buf.retain();
+            try {
+                return fromJson(buf, type instanceof TypeRef<?> ref ? ref.type : type);
+            } catch (Exception ex) {
+                ReferenceCountUtil.release(buf, 1);
+                throw ex;
+            } finally {
+                ReferenceCountUtil.release(buf, 1);
+            }
+        }
+
+        @Override
+        public void encode(ByteBuf buf, Object value) {
+            // assert buf.refCnt() == 1 : " ref count is " + buf.refCnt();
+            buf.retain();
+            try {
+                toJson(buf, value);
+            } catch (Exception ex) {
+                ReferenceCountUtil.release(buf, 2);
+                throw ex;
+            } finally {
+                ReferenceCountUtil.release(buf, 1);
+            }
+        }
+
+        /**
+         * Implement no need to deal with RefCnt of ByteBuf.
+         *
+         * @param buf  the buffer
+         * @param type type which exactly be the java type, not a TypeRef
+         */
+        protected abstract <T> T fromJson(ByteBuf buf, Type type);
+
+        /**
+         * Implement no need to deal with RefCnt of ByteBuf.
+         *
+         * @param buf   the buf to write to
+         * @param value the value to be serialized.
+         */
+        protected abstract void toJson(ByteBuf buf, Object value);
+    }
+
+    /**
+     * Provider of SPI.
+     */
     interface Provider {
         static Codec load(boolean debug) {
             return ServiceLoader.load(Provider.class, Provider.class.getClassLoader()).findFirst().orElseThrow(() -> new NoSuchElementException("missing Codec implement")).get(debug);

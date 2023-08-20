@@ -18,6 +18,7 @@ package cn.zenliu.java.consul.transport.http;
 import cn.zenliu.java.consul.Client;
 import cn.zenliu.java.consul.trasport.Codec;
 import cn.zenliu.java.consul.trasport.Requester;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.http.HttpClient;
 import java.util.concurrent.ExecutorService;
@@ -28,8 +29,8 @@ public class HttpConsulClient extends Client.BaseClient {
     final Codec codec;
     final String baseUrl;
 
-    public HttpConsulClient(HttpClient client, String baseUrl, ExecutorService executor, Codec codec) {
-        this.client = client;
+    public HttpConsulClient(@Nullable HttpClient client, String baseUrl, ExecutorService executor, Codec codec) {
+        this.client = client == null ? HttpClient.newBuilder().executor(executor).build() : client;
         this.executor = executor;
         this.codec = codec;
         this.baseUrl = baseUrl;

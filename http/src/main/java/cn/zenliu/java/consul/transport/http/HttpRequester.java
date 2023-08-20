@@ -110,26 +110,54 @@ public class HttpRequester extends Requester.AbstractRequester<HttpRequester> {
         @Override
         public Responder<T> send(@Nullable Object body) {
             if (body == null) {
-                return new HttpResponder<>(executor, client, request.method(method, HttpRequest.BodyPublishers.noBody()).build(), codec, type, def);
+                return new HttpResponder<>(executor, client, request
+                        .method(method, HttpRequest.BodyPublishers.noBody())
+                        .build(), codec, type, def);
             }
-
             var buf = ByteBufAllocator.DEFAULT.buffer();
-            buf.retain();
             codec.encode(buf, body);
             @SuppressWarnings("resource") var is = new ByteBufInputStream(buf, true);
-            return new HttpResponder<>(executor, client, HttpRequest.newBuilder()
+            return new HttpResponder<>(executor, client, request
                     .method(method, HttpRequest.BodyPublishers.ofInputStream(() -> is))
                     .build(), codec, type, def);
         }
 
         @Override
         public Responder<T> sendRaw(byte @Nullable [] body) {
-            return null;
+            if (body == null) {
+                return new HttpResponder<>(executor, client, request
+                        .method(method, HttpRequest.BodyPublishers.noBody())
+                        .build(), codec, type, def);
+            }
+            return new HttpResponder<>(executor, client, request
+                    .method(method, HttpRequest.BodyPublishers.ofByteArray(body))
+                    .build(), codec, type, def);
         }
 
         @Override
         public Responder<T> sendRaw(@Nullable String body) {
-            return null;
+            if (body == null) {
+                return new HttpResponder<>(executor, client, request
+                        .method(method, HttpRequest.BodyPublishers.noBody())
+                        .build(), codec, type, def);
+            }
+            return new HttpResponder<>(executor, client, request
+                    .method(method, HttpRequest.BodyPublishers.ofString(body))
+                    .build(), codec, type, def);
+        }
+
+        @Override
+        public Responder<T> sendRaw(@Nullable ByteBuf body) {
+            if (body == null) {
+                return new HttpResponder<>(executor, client, request
+                        .method(method, HttpRequest.BodyPublishers.noBody())
+                        .build(), codec, type, def);
+            }
+            //assert body.refCnt() == 1 : "buf have refCnt " + body.refCnt();
+            @SuppressWarnings("resource") var is = new ByteBufInputStream(body, true);
+            return new HttpResponder<>(executor, client, request
+                    .method(method, HttpRequest.BodyPublishers.ofInputStream(() -> is))
+                    .build(), codec, type, def);
         }
     }
 
@@ -161,13 +189,12 @@ public class HttpRequester extends Requester.AbstractRequester<HttpRequester> {
                         } else {
                             return d.build();
                         }
-
                     } else if (def != null && r.statusCode() == 404) {
                         return d.body(def).build();
                     } else {
                         var buf = new ToByteBufSubscriber();
                         r.body().subscribe(buf);
-                        return d.error(buf.getString()).build();
+                        return d.error(r.request().uri().toASCIIString() + "\n" + buf.getString()).build();
                     }
                 } catch (IOException | InterruptedException e) {
                     throw new RuntimeException(e);
@@ -182,7 +209,7 @@ public class HttpRequester extends Requester.AbstractRequester<HttpRequester> {
 
 
     public HttpRequester(@Nullable HttpClient client, String baseUrl, ExecutorService executor, Codec codec) {
-        this.client = client == null ? HttpClient.newHttpClient() : client;
+        this.client = client == null ? HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build() : client;
         this.executor = executor;
         this.codec = codec;
         super.base(baseUrl);
@@ -218,11 +245,22 @@ public class HttpRequester extends Requester.AbstractRequester<HttpRequester> {
     }
 
     @AutoService(Requester.Factory.class)
-    static class Factory implements Requester.Factory {
-
+    public static class Factory implements Requester.Factory {
         @Override
         public Requester<?> make(ExecutorService executor, String baseUrl, Codec codec, boolean debug) {
-            return new HttpRequester(HttpClient.newBuilder().build(), baseUrl, executor, codec);
+            if (debug) {
+                System.setProperty("jdk.httpclient.HttpClient.log", "errors,requests,headers,frames:all,ssl,trace,channel");
+                //try install jul-to-slf4j
+                try {
+                    var cls = Class.forName("org.slf4j.bridge.SLF4JBridgeHandler");
+                    cls.getMethod("removeHandlersForRootLogger").invoke(null);
+                    cls.getMethod("install").invoke(null);
+                } catch (Exception ignore) {
+
+                }
+            }
+
+            return new HttpRequester(HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).executor(executor).build(), baseUrl, executor, codec);
         }
     }
 }

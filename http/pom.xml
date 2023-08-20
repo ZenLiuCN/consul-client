@@ -35,5 +35,17 @@
             <artifactId>consul-api</artifactId>
             <version>${project.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>io.github.zenliucn</groupId>
+            <artifactId>consul-codec-gson</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jul-to-slf4j</artifactId>
+            <version>2.0.6</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

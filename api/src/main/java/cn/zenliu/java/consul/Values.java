@@ -21,6 +21,7 @@ import cn.zenliu.java.consul.trasport.TypeRef;
 import lombok.Builder;
 import lombok.Value;
 import lombok.experimental.Accessors;
+import lombok.extern.jackson.Jacksonized;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.lang.reflect.Type;
@@ -87,6 +88,7 @@ public interface Values {
 
     @Value
     @Builder
+    @Jacksonized
     @Accessors(fluent = true)
     class QueryParameter implements Parameter {
         public static final QueryParameter DEFAULT = QueryParameter.builder().build();
@@ -118,6 +120,7 @@ public interface Values {
 
     @Value
     @Builder
+    @Jacksonized
     @Accessors(fluent = true)
     class Info<T> {
 
@@ -179,6 +182,7 @@ public interface Values {
 
     @Value
     @Builder
+    @Jacksonized
     @Accessors(fluent = true)
     class NodeParameter implements Parameter {
 
@@ -204,6 +208,7 @@ public interface Values {
 
     @Value
     @Builder
+    @Jacksonized
     @Accessors(fluent = true)
     class IDOnly implements JsonValue {
 
@@ -212,6 +217,7 @@ public interface Values {
 
     @Value
     @Builder
+    @Jacksonized
     @Accessors(fluent = true)
     class Check implements JsonValue {
         public enum Status implements JsonValue {
@@ -257,6 +263,7 @@ public interface Values {
 
     @Value
     @Builder
+    @Jacksonized
     @Accessors(fluent = true)
     class Node implements JsonValue {
         public static final Type LIST = new TypeRef<List<Node>>() {
@@ -289,6 +296,7 @@ public interface Values {
 
     @Value
     @Builder
+    @Jacksonized
     @Accessors(fluent = true)
     class Service implements JsonValue {
         public static final Type MAP = new TypeRef<Map<String, Service>>() {
@@ -325,6 +333,7 @@ public interface Values {
 
     @Value
     @Builder
+    @Jacksonized
     @Accessors(fluent = true)
     class ServiceParameter implements Parameter {
         String datacenter;
@@ -366,6 +375,7 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class ACL implements JsonValue {
             public static final Type LIST = new TypeRef<List<ACL>>() {
@@ -388,6 +398,7 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class CreateAcl implements JsonValue {
             String Name;
@@ -399,6 +410,7 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class UpdateAcl implements JsonValue {
             String ID;
@@ -414,6 +426,7 @@ public interface Values {
     interface Agent extends Values {
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class Member implements JsonValue {
             public static final Type LIST = new TypeRef<List<Member>>() {
@@ -444,6 +457,7 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class CreateCheck implements JsonValue {
             String ID;
@@ -488,10 +502,12 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class CreateService implements JsonValue {
             @Value
             @Builder
+            @Jacksonized
             @Accessors(fluent = true)
             public static class Check implements JsonValue {
                 String Script;
@@ -546,6 +562,7 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class Self implements JsonValue {
             enum LogLevel implements JsonValue {
@@ -559,6 +576,7 @@ public interface Values {
 
             @Value
             @Builder
+            @Jacksonized
             @Accessors(fluent = true)
             public static class Config implements JsonValue {
                 String Datacenter;
@@ -578,6 +596,7 @@ public interface Values {
 
             @Value
             @Builder
+            @Jacksonized
             @Accessors(fluent = true)
             public static class DebugConfig implements JsonValue {
                 boolean Bootstrap;
@@ -672,6 +691,7 @@ public interface Values {
 
             @Value
             @Builder
+            @Jacksonized
             @Accessors(fluent = true)
             public static class XDS {
                 Map<String, List<String>> SupportedProxies;
@@ -684,6 +704,7 @@ public interface Values {
     interface Catalog extends Values {
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class Service implements JsonValue {
             public static final Type LIST = new TypeRef<List<Service>>() {
@@ -722,11 +743,13 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class Node implements JsonValue {
 
             @Value
             @Builder
+            @Jacksonized
             @Accessors(fluent = true)
             public static class Service implements JsonValue {
                 String ID;
@@ -745,6 +768,7 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class Deregistration implements JsonValue {
             String Datacenter;
@@ -760,6 +784,7 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class WriteRequest implements JsonValue {
             String Token;
@@ -767,10 +792,12 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class Registration implements JsonValue {
             @Value
             @Builder
+            @Jacksonized
             @Accessors(fluent = true)
             public static class Service implements JsonValue {
                 String ID;
@@ -789,6 +816,7 @@ public interface Values {
 
             @Value
             @Builder
+            @Jacksonized
             @Accessors(fluent = true)
             public static class Check implements JsonValue {
                 String Node;
@@ -828,6 +856,7 @@ public interface Values {
     interface Coordinate extends Values {
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class Coord implements JsonValue {
             Double Error;
@@ -841,6 +870,7 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class Datacenter implements JsonValue {
             public static final Type LIST = new TypeRef<List<Datacenter>>() {
@@ -855,6 +885,7 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class Node implements JsonValue {
             public static final Type LIST = new TypeRef<List<Node>>() {
@@ -869,6 +900,7 @@ public interface Values {
     interface Events extends Values {
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class Event implements JsonValue {
             public static final Type LIST = new TypeRef<List<Event>>() {
@@ -901,6 +933,7 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class EventServiceParameter implements Parameter {
             String name;
@@ -926,6 +959,7 @@ public interface Values {
     interface Health extends Values {
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class Service implements JsonValue {
             public static final Type LIST = new TypeRef<List<Service>>() {
@@ -945,6 +979,7 @@ public interface Values {
     interface Query extends Values {
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class QueryCheck implements JsonValue {
             String Node;
@@ -984,6 +1019,7 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class QueryDNS implements JsonValue {
             String TTL;
@@ -992,6 +1028,7 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class QueryNode implements JsonValue {
 
@@ -1007,6 +1044,7 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class QueryExecution implements JsonValue {
             String Service;
@@ -1037,6 +1075,7 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class Session implements JsonValue {
             public static final Type LIST = new TypeRef<List<Session>>() {
@@ -1073,6 +1112,7 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class CreateSession implements JsonValue {
             long LockDelay;
@@ -1117,12 +1157,10 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
-        public static class Text implements KvPair<String>, JsonValue {
+        public static class Pojo implements KvPair<String>, JsonValue {
 
-            public static final Type LIST = new TypeRef<List<Text>>() {
-            }.type();
-            public static final List<Text> EMPTY_LIST = Collections.emptyList();
 
             long CreateIndex;
 
@@ -1142,6 +1180,59 @@ public interface Values {
 
         @Value
         @Builder
+        @Jacksonized
+        @Accessors(fluent = true)
+        public static class Text implements KvPair<String>, JsonValue {
+
+            public static final Type LIST = new TypeRef<List<Base64>>() {
+            }.type();
+            public static final List<Base64> EMPTY_LIST = Collections.emptyList();
+
+            long CreateIndex;
+
+            long ModifyIndex;
+
+            Long LockIndex;
+
+            long Flags;
+
+            String Session;
+
+            String Key;
+
+            String Value;
+
+        }
+
+        @Value
+        @Builder
+        @Jacksonized
+        @Accessors(fluent = true)
+        public static class Base64 implements KvPair<String>, JsonValue {
+
+            public static final Type LIST = new TypeRef<List<Base64>>() {
+            }.type();
+            public static final List<Base64> EMPTY_LIST = Collections.emptyList();
+
+            long CreateIndex;
+
+            long ModifyIndex;
+
+            Long LockIndex;
+
+            long Flags;
+
+            String Session;
+
+            String Key;
+
+            String Value;
+
+        }
+
+        @Value
+        @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class Binary implements KvPair<byte[]>, JsonValue {
 
@@ -1163,10 +1254,22 @@ public interface Values {
 
             byte[] Value;
 
+            public Text toText() {
+                return Text.builder()
+                        .CreateIndex(CreateIndex)
+                        .ModifyIndex(ModifyIndex)
+                        .LockIndex(LockIndex)
+                        .Flags(Flags)
+                        .Session(Session)
+                        .Key(Key)
+                        .Value(new String(Value))
+                        .build();
+            }
         }
 
         @Value
         @Builder
+        @Jacksonized
         @Accessors(fluent = true)
         public static class PutParameter implements Parameter {
             long flags;

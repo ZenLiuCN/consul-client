@@ -23,10 +23,12 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.ReferenceCountUtil;
 import org.jetbrains.annotations.Nullable;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.ByteBufFlux;
+import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
 
 import java.lang.reflect.Type;
@@ -65,7 +67,7 @@ public class ReactorRequester extends Requester.AbstractRequester<ReactorRequest
                 } else if (def != null && r.status() == HttpResponseStatus.NOT_FOUND) {
                     return Mono.just(d.body(def).build());
                 } else {
-                    return b.asString().map(err -> (Data<T>) d.error(err).build());
+                    return b.asString().map(err -> (Data<T>) d.error(r.fullPath() + "\n" + err).build());
                 }
             }).block(), executor));
         }
@@ -84,20 +86,11 @@ public class ReactorRequester extends Requester.AbstractRequester<ReactorRequest
                 return new RectorResponder<>(client.send(Mono.empty()), executor, codec, type, def);
             }
             return new RectorResponder<>(client.send(Mono.fromSupplier(() -> {
-                var buf = ByteBufAllocator.DEFAULT.buffer();
-                buf.retain();
-                try {
-                    codec.encode(buf, body);
-                    return buf;
-                } finally {
-                    buf.release();
-                }
-            }).subscribeOn(Schedulers.fromExecutor(executor)).doOnDiscard(ByteBuf.class, buf -> {
-                try {
-                    buf.release();
-                } catch (Exception ignore) {
-                }
-            })), executor, codec, type, def);
+                        var buf = ByteBufAllocator.DEFAULT.buffer();
+                        codec.encode(buf, body);
+                        return buf;
+                    }).subscribeOn(Schedulers.fromExecutor(executor))
+                    .doOnDiscard(ByteBuf.class, ReferenceCountUtil::release)), executor, codec, type, def);
         }
 
         @Override
@@ -105,12 +98,9 @@ public class ReactorRequester extends Requester.AbstractRequester<ReactorRequest
             if (body == null) {
                 return new RectorResponder<>(client.send(Mono.empty()), executor, codec, type, def);
             }
-            return new RectorResponder<>(client.send(Mono.just(Unpooled.wrappedBuffer(body)).subscribeOn(Schedulers.fromExecutor(executor)).doOnDiscard(ByteBuf.class, buf -> {
-                try {
-                    buf.release();
-                } catch (Exception ignore) {
-                }
-            })), executor, codec, type, def);
+            return new RectorResponder<>(client.send(Mono.just(Unpooled.wrappedBuffer(body))
+                    .subscribeOn(Schedulers.fromExecutor(executor))
+                    .doOnDiscard(ByteBuf.class, ReferenceCountUtil::release)), executor, codec, type, def);
         }
 
         @Override
@@ -118,12 +108,20 @@ public class ReactorRequester extends Requester.AbstractRequester<ReactorRequest
             if (body == null) {
                 return new RectorResponder<>(client.send(Mono.empty()), executor, codec, type, def);
             }
-            return new RectorResponder<>(client.send(ByteBufFlux.fromString(Mono.just(body)).subscribeOn(Schedulers.fromExecutor(executor)).doOnDiscard(ByteBuf.class, buf -> {
-                try {
-                    buf.release();
-                } catch (Exception ignore) {
-                }
-            })), executor, codec, type, def);
+            return new RectorResponder<>(client.send(ByteBufFlux.fromString(Mono.just(body))
+                    .subscribeOn(Schedulers.fromExecutor(executor))
+                    .doOnDiscard(ByteBuf.class, ReferenceCountUtil::release)), executor, codec, type, def);
+        }
+
+        @Override
+        public Responder<T> sendRaw(@Nullable ByteBuf body) {
+            if (body == null) {
+                return new RectorResponder<>(client.send(Mono.empty()), executor, codec, type, def);
+            }
+            body.retain();
+            return new RectorResponder<>(client.send(Mono.just(body)
+                    .subscribeOn(Schedulers.fromExecutor(executor))
+                    .doOnDiscard(ByteBuf.class, ReferenceCountUtil::release)), executor, codec, type, def);
         }
     }
 
@@ -131,8 +129,8 @@ public class ReactorRequester extends Requester.AbstractRequester<ReactorRequest
     final ExecutorService executor;
     final Codec codec;
 
-    public ReactorRequester(HttpClient client, ExecutorService executor, Codec codec) {
-        this.client = client == null ? HttpClient.create() : client;
+    public ReactorRequester(@Nullable HttpClient client, ExecutorService executor, Codec codec) {
+        this.client = client == null ? HttpClient.create().protocol(HttpProtocol.HTTP11) : client;
         this.executor = executor;
         this.codec = codec;
     }
@@ -161,7 +159,7 @@ public class ReactorRequester extends Requester.AbstractRequester<ReactorRequest
 
     @Override
     public <T> Sender<T> delete(@Nullable Type type, @Nullable T def) {
-        return request(HttpMethod.POST, type, def);
+        return request(HttpMethod.DELETE, type, def);
     }
 
     @Override
@@ -170,11 +168,10 @@ public class ReactorRequester extends Requester.AbstractRequester<ReactorRequest
     }
 
     @AutoService(Requester.Factory.class)
-    static class Factory implements Requester.Factory {
-
+    public static class Factory implements Requester.Factory {
         @Override
         public Requester<?> make(ExecutorService executor, String baseUrl, Codec codec, boolean debug) {
-            return new ReactorRequester(HttpClient.create().baseUrl(baseUrl).secure().wiretap(debug), executor, codec);
+            return new ReactorRequester(HttpClient.create().protocol(HttpProtocol.HTTP11).baseUrl(baseUrl).wiretap(debug), executor, codec);
         }
     }
 }
