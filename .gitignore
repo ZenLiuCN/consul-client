@@ -2,3 +2,5 @@
 .vscode/
 *.iml
 target/
+util/api/
+*.z7

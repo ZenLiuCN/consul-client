@@ -138,5 +138,21 @@ class ReactorConsulClientTest {
         }
     }
 
+    @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+    @Nested
+    class SessionTests {
+        final Endpoints.Sessions<?> sessions = client.session(null, null);
+        final String key = "some/service";
+        final String value = "some-service-check";
+
+
+        @Test
+        @Order(2)
+        void create() {
+            assertDoesNotThrow(() -> sessions.create(Values.Sessions.CreateSession.builder()
+                    .Behavior(Values.Sessions.SessionBehavior.release)
+                    .build()).get());
+        }
+    }
 
 }
